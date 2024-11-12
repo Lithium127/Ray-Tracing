@@ -3,7 +3,7 @@ import typing as t
 
 from .color import Color
 from .skybox import SkyBox, Lerp
-from .hittable import HitRecord, Interval
+from .hittable import HitRecord, Interval, BVHNode
 from .vec3 import Vector3
 from .ray import Ray
 
@@ -37,6 +37,7 @@ class Scene(object):
             asset (Hittable): Asset to add to scene
         """
         self.assets.append(asset)
+        
     
     def clear(self) -> t.NoReturn:
         """Clears this scene removing all assets"""
@@ -67,6 +68,7 @@ class Scene(object):
     
     def r_ray_color(self, r: Ray, rec: HitRecord, limit: int, depth: int = 0) -> Color:
         """A recursive copy of ray_color() that doesnt increase memory consumption
+        and implements a bounce limit.
 
         Args:
             r (Ray): A ray cast through this scene
@@ -80,6 +82,7 @@ class Scene(object):
         if limit < depth:
             return Color.BLACK()
         
+        # Magic number to avoid hitting the space we start at
         if self.hit(r, Interval(0.001), rec):
             scattered = Ray(None, None)
             attenuation = Color.BLACK()
@@ -101,6 +104,7 @@ class Scene(object):
         """
         rec = HitRecord()
         
+        # Magic number to avoid re-hitting the space we start at
         if self.hit(r, Interval(0.001), rec):
             scattered = Ray(None, None)
             attenuation = Color.BLACK()

@@ -1,6 +1,5 @@
 from __future__ import annotations
 import typing as t
-import os
 from math import ceil, pi, tan
 from random import random
 
@@ -13,6 +12,7 @@ from .vec3 import Vector3
 from .ray import Ray
 
 if t.TYPE_CHECKING:
+    import os
     from .scene import Scene
     from .vec3 import Point3
 
@@ -117,6 +117,7 @@ class Camera:
         self.recursion_limit = recursion_limit
         
         self.fov = fov
+        # This calculation generates the viewport height constant
         theta =  fov * pi / 180.0
         h = tan(theta / 2)
             

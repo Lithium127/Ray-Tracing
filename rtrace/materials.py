@@ -105,7 +105,7 @@ class Dielectric(Material):
 
 
 class VectorShade(Material):
-    """Shades an object based on the """
+    """Shades an object based on the normal vector of the hit"""
     albedo: Color
     
     def __init__(self) -> None:
@@ -114,4 +114,17 @@ class VectorShade(Material):
     def scatter(self, r_in, rec, attenuation, scattered):
         c_at = 0.5 * (rec.normal + Vector3(1, 1, 1))
         attenuation.x, attenuation.y, attenuation.z = c_at.x, c_at.y, c_at.z
+        return False
+
+
+class MonoShade(Material):
+    """Shades an object with a single color and does not propogate rays"""
+    
+    albedo: Color
+    
+    def __init__(self, albedo: Color):
+        self.albedo = albedo
+    
+    def scatter(self, r_in, rec, attenuation, scattered):
+        attenuation.x, attenuation.y, attenuation.z = self.albedo.x, self.albedo.y, self.albedo.z
         return False

@@ -109,8 +109,8 @@ class Color(object):
     
     # --< Class Methods >-- #
     @classmethod
-    def average(cls, *clr: Color) -> Color:
-        return (sum(*clr)) / len(*clr)
+    def average(cls, c1: Color, c2: Color) -> Color:
+        return (c1  + c2) / 2
     
     # --< Default / Common Colors >-- #
     @classmethod
