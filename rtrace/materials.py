@@ -107,13 +107,17 @@ class Dielectric(Material):
 class VectorShade(Material):
     """Shades an object based on the normal vector of the hit"""
     albedo: Color
+    reflection_rules: Material
     
-    def __init__(self) -> None:
+    def __init__(self, *, rlike: Material | None = None) -> None:
         self.albedo = Color(1, 1, 1)
+        self.reflection_rules = rlike
     
     def scatter(self, r_in, rec, attenuation, scattered):
-        c_at = 0.5 * (rec.normal + Vector3(1, 1, 1))
+        c_at = 0.2 * (rec.normal + Vector3(1, 1, 1))
         attenuation.x, attenuation.y, attenuation.z = c_at.x, c_at.y, c_at.z
+        if self.reflection_rules is not None:
+            return self.reflection_rules.scatter(r_in=r_in, rec=rec, attenuation=Color.BLACK(), scattered=scattered)
         return False
 
 

@@ -5,6 +5,7 @@ from random import uniform
 
 class Vector3(object):
     
+    # Refactor to use a list for coordinates to be more robust
     x: float
     y: float
     z: float

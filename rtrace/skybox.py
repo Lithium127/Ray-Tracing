@@ -1,7 +1,9 @@
 from __future__ import annotations
 import typing as t
+from PIL import Image
 
 if t.TYPE_CHECKING:
+    import os
     from .ray import Ray
     from .color import Color
 
@@ -21,6 +23,14 @@ class SkyBox(object):
         ...
     
     def get_color(self, r: Ray) -> Color:
+        """Returns the color of the skybox given a single ray
+
+        Args:
+            r (Ray): The ray that hits the skybox
+
+        Returns:
+            Color: The color of the skybox at that point
+        """
         ...
 
 class Lerp(SkyBox):
@@ -42,14 +52,6 @@ class Lerp(SkyBox):
         self.c2 = lower
     
     def get_color(self, r: Ray) -> Color:
-        """Returns the color of the skybox given a single ray
-
-        Args:
-            r (Ray): The ray that hits the skybox
-
-        Returns:
-            Color: The color of the skybox at that point
-        """
         unit_direction = r.direction.unit_vector
         a = 0.5*(unit_direction.y + 1.0)
         return (1.0-a) * self.c2 + a * self.c1
@@ -68,12 +70,17 @@ class Mono(SkyBox):
         self.color = color
     
     def get_color(self, r: Ray) -> Color:
-        """Returns the color of the skybox given a single ray
-
-        Args:
-            r (Ray): The ray that hits the skybox
-
-        Returns:
-            Color: The color of the skybox at that point
-        """
         return self.color
+
+
+class Textured(SkyBox):
+    
+    fp: os.PathLike
+    texture: Image.Image
+    
+    def __init__(self, texture_path: os.PathLike):
+        super(Textured, self).__init__()
+    
+    def get_color(self, r: Ray):
+        return Color.BLACK()
+        

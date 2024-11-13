@@ -24,6 +24,10 @@ _HEIGHT_ASPECT_BOUNDARY = 4
 # 16 yielded the best results
 _MULTIPROCESS_BLOCK_SIZE = 16
 
+
+def degrees_to_radians(deg: float) -> float:
+    return deg * pi / 180.0
+
 class Camera:
     
     img_width: int
@@ -118,7 +122,7 @@ class Camera:
         
         self.fov = fov
         # This calculation generates the viewport height constant
-        theta =  fov * pi / 180.0
+        theta = degrees_to_radians(fov)
         h = tan(theta / 2)
             
         self.viewport_height = 2 * h * focus_dist
@@ -138,7 +142,7 @@ class Camera:
         self.pixel00_loc = self.viewport_upper_left + 0.5 * (self.pixel_delta_u + self.pixel_delta_v)
         
         self.defocus_angle = focus_angle
-        defocus_radians = focus_dist * tan((self.defocus_angle / 2) * pi / 180.0)
+        defocus_radians = focus_dist * tan(degrees_to_radians((self.defocus_angle / 2)))
         self.defocus_disc_u = self.u * defocus_radians 
         self.defocus_disc_v = self.v * defocus_radians
         

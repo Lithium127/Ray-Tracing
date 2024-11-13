@@ -386,8 +386,8 @@ class Sphere(Hittable):
         Returns:
             bool: If ray r hits this sphere
         """
-        oc = self.center - r.origin
         
+        oc = self.center - r.origin
         # This area could use some major performance boosts
         
         # Calcualted values for quadratic

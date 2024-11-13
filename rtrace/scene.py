@@ -10,8 +10,6 @@ from .ray import Ray
 if t.TYPE_CHECKING:
     from .hittable import Hittable
 
-_REFLECTED_LIGHT_MULTIPLIER = 1
-
 class Scene(object):
     """A collection of hittable objects and a skybox that can be rendered with a camera"""
     
@@ -80,14 +78,14 @@ class Scene(object):
             Color: The color of the ray.
         """
         if limit < depth:
-            return Color.BLACK()
+            return Color(0, 0, 0)
         
         # Magic number to avoid hitting the space we start at
         if self.hit(r, Interval(0.001), rec):
             scattered = Ray(None, None)
-            attenuation = Color.BLACK()
+            attenuation = Color(0, 0, 0)
             if rec.mat.scatter(r, rec, attenuation, scattered):
-                return _REFLECTED_LIGHT_MULTIPLIER * attenuation * self.r_ray_color(scattered, rec, limit, depth + 1)
+                return attenuation * self.r_ray_color(scattered, rec, limit, depth + 1)
             return attenuation # Color.BLACK()
         
         return self.skybox.get_color(r)
@@ -107,9 +105,9 @@ class Scene(object):
         # Magic number to avoid re-hitting the space we start at
         if self.hit(r, Interval(0.001), rec):
             scattered = Ray(None, None)
-            attenuation = Color.BLACK()
+            attenuation = Color(0, 0, 0)
             if rec.mat.scatter(r, rec, attenuation, scattered):
-                return _REFLECTED_LIGHT_MULTIPLIER * attenuation * self.r_ray_color(scattered, rec, limit)
+                return attenuation * self.r_ray_color(scattered, rec, limit)
             return attenuation # Color.BLACK()
         
         return self.skybox.get_color(r)
