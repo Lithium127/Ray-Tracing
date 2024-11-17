@@ -6,17 +6,17 @@ from rtrace import Camera, Scene, Point3, SkyBox, Color, Assets, Mat
 """ =========== """
 
 # Image Information
-RENDER_IMG_WIDTH    = 1024
+RENDER_IMG_WIDTH    = 4096
 RENDER_ASPECT_RATIO = 16/9
 SAVE_PATH = "images"
 FILE_NAME = "test"
 
 # Rendering Quality
-SAMPLES_PER_PIXEL = 16
-RAY_BOUNCE_LIMIT  = 64
+SAMPLES_PER_PIXEL = 1
+RAY_BOUNCE_LIMIT  = 8
 
 # Camera Data
-CAMERA_CENTER  = Point3(0, 0, 1.5)
+CAMERA_CENTER  = Point3(0, 0.5, 1.5)
 CAMERA_LOOK_AT = Point3(0, 0, -1)
 FIELD_OF_VIEW  = 60
 DRAW_SILENT    = True
@@ -26,6 +26,18 @@ MULTIPROCESS   = True
 
 
 def main():
+    
+    a = [
+        Assets.Sphere(
+            Point3(x % 10, -0.8, x // 10),
+            0.2,
+            Mat.Lambertian(
+                Color.WHITE()
+            )
+        )
+        for x in range(10 * 10)
+    ]
+    
     scene = Scene(
         [
             # Ground object
@@ -34,21 +46,33 @@ def main():
                 100, 
                 Mat.Lambertian(Color.GRAY()),
             ),
-            Assets.Sphere(
-                Point3(1, 0, -1.75),
-                0.5,
-                Mat.Dielectric.Glass()
-            ),
-            Assets.Sphere(
-                Point3(0, 0, -1),
-                0.5,
-                Mat.VectorShade()
+            Assets.HittableList(
+                [
+                    Assets.Sphere(
+                        Point3(1, 0, -1.75),
+                        0.5,
+                        Mat.Dielectric(
+                            1.33/1.0,
+                            Color.average(Color.GREEN(), Color.BLUE())
+                        )
+                    ),
+                    Assets.Sphere(
+                        Point3(0, 0, -1),
+                        0.5,
+                        Mat.VectorShade()
+                    ),
+                ],
+                use_bvh=False
             ),
             Assets.Sphere(
                 Point3(-1.2, 0, -1),
                 0.5,
                 Mat.Metal(Color.GRAY())
             ),
+            # Assets.HittableList(
+            #     a,
+            #     use_bvh = True
+            # )
         ],
         skybox = SkyBox.Lerp(
             Color(0.7, 0.5, 1),

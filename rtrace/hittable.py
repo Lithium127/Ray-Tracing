@@ -1,7 +1,8 @@
 from __future__ import annotations
 import typing as t
 
-from math import sqrt, inf
+from math import sqrt, inf, acos, atan2
+from math import pi as PI
 from random import choice
 
 from .vec3 import Point3, Vector3
@@ -111,6 +112,8 @@ class HitRecord(object):
     normal: Vector3
     mat: Material
     t: float
+    u: float
+    v: float
     front_face: bool
     
     def __init__(self):
@@ -237,31 +240,20 @@ class AABB:
         """
         orig = r.origin
         r_dir = r.direction
-        for i in range(3):
-            if i == 0:
-                yield (self.x, r_dir.x, orig.x)
-            if i == 1:
-                yield (self.y, r_dir.y, orig.y)
-            if i == 2:
-                yield (self.z, r_dir.z, orig.z)
+        for pair in [(self.x, 1.0 / r_dir.x, orig.x), (self.y, 1.0 / r_dir.y, orig.y), (self.z, 1.0 / r_dir.z, orig.z)]:
+            yield pair
     
     def hit(self, r: Ray, ray_t: Interval) -> bool:
         
-        for ax, r_dir, orig in self._axis_interval(r):
-            adinv = 1.0 / r_dir
-            
+        for ax, adinv, orig in self._axis_interval(r):
+
             t0, t1 = ((ax.min - orig) * adinv), ((ax.max - orig) * adinv)
             
-            if (t0 < t1):
-                ray_t.min = min(ray_t.min, t0)
-                ray_t.max = max(ray_t.max, t1)
-            else:
-                ray_t.min = min(ray_t.min, t1)
-                ray_t.max = max(ray_t.max, t0)
+            ray_t.min = min(ray_t.min, t0, t1)
+            ray_t.max = max(ray_t.max, t0, t1)
             
-            if ray_t.max < ray_t.min:
+            if ray_t.max <= ray_t.min:
                 return False
-    
         return True
             
 
@@ -314,13 +306,15 @@ class BVHNode(Hittable):
         if not self.bbox.hit(r, ray_t):
             return False
         
-        temp_rec = rec
+        temp_rec = HitRecord()
+        temp_rec.copy_data(rec)
         
         hit_left = self.left.hit(r, ray_t, temp_rec)
-        hit_right = self.right.hit(r, Interval(ray_t.min, (rec.t if hit_left else ray_t.max)), temp_rec)
+        hit_right = self.right.hit(r, Interval(ray_t.min, (temp_rec.t if hit_left else ray_t.max)), temp_rec)
+        
+        rec.copy_data(temp_rec)
         
         if (hit_left or hit_right):
-            rec.copy_data(temp_rec)
             return True
         return False
         
@@ -337,22 +331,57 @@ class BVHNode(Hittable):
     
 class HittableList(Hittable):
     
+    _use_bvh: bool
     assets: list[Hittable]
+    bvh: BVHNode | None
     
-    def __init__(self, objects: list[Hittable] | None = None):
+    def __init__(self, objects: list[Hittable] | None = None, *, use_bvh: bool = False):
         super().__init__(Point3(0, 0, 0))
+        
+        self._use_bvh = use_bvh
+        
         self.assets = []
         if objects is not None:
             [self.add_asset(obj) for obj in objects]
+            
+        if use_bvh:
+            self.bvh = BVHNode(self.assets)
+            self.hit = self._hit_bvh
     
     def add_asset(self, asset: Hittable) -> None:
         if len(self.assets) < 1:
             self.center = asset.center
+            self.bbox = asset.bbox
         self.assets.append(asset)
         self.bbox = AABB.from_box(self.bbox, asset.bbox)
+        
+        if self._use_bvh:
+            self.bvh = BVHNode(self.assets)
     
     def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
-        return super().hit(r, ray_t, rec)
+        temp_rec = HitRecord()
+        hit_anything = False
+        
+        for asset in self.assets:
+            if asset.hit(r, ray_t, temp_rec):
+                hit_anything = True
+                ray_t.max = temp_rec.t
+                rec.copy_data(temp_rec) # Copy all data into temp_rec
+        
+        return hit_anything
+    
+    def _hit_bvh(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
+        """An optional override for HittableList.hit that implements the structure for BVHNodes as the asset list
+
+        Args:
+            r (Ray): _description_
+            ray_t (Interval): _description_
+            rec (HitRecord): _description_
+
+        Returns:
+            bool: _description_
+        """
+        return self.bvh.hit(r, ray_t, rec)
 
 class Sphere(Hittable):
     # Transfer to an exposed .cpp file
@@ -372,7 +401,7 @@ class Sphere(Hittable):
         self.mat = mat
         
         rvec = Point3(radius, radius, radius)
-        self.bbox = AABB.from_points(rvec, -rvec)
+        self.bbox = AABB.from_points(-rvec, rvec)
     
     def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
         """Returns True if Ray r hits this sphere within the interval ray_t
@@ -409,13 +438,24 @@ class Sphere(Hittable):
             if not ray_t.surrounds(root):
                 return False
         
+        
         # Save data to hitrec
         rec.t = root
         rec.p = r.at(root)
-        rec.set_face_normal(r, (rec.p - self.center) / self.radius)
-        rec.mat = self.mat
         
+        outward_normal = (rec.p - self.center) / self.radius
+        rec.set_face_normal(r, outward_normal)
+        rec.mat = self.mat
+        rec.u, rec.v = self.get_uv(outward_normal)
         return True
         
         
+    def get_uv(self, p: Point3) -> tuple[float, float]:
+        theta = acos(-p.y)
+        phi = atan2(-p.z, p.x) + PI
+        
+        return (
+            phi / (2*PI),
+            theta / PI
+        )
         

@@ -5,8 +5,10 @@ from math import sqrt
 
 from .vec3 import Vector3
 from .color import Color
+from .textures import SolidColor
 
 if t.TYPE_CHECKING:
+    from .textures import Texture
     from .hittable import HitRecord
     from .ray import Ray
 
@@ -32,10 +34,12 @@ class Material(object):
     
 class Lambertian(Material):
     
-    albedo: Color
+    texture: Texture
     
-    def __init__(self, albedo: Color):
-        self.albedo = albedo
+    def __init__(self, texture: Color | Texture):
+        if isinstance(texture, Color):
+            texture = SolidColor(texture)
+        self.texture = texture
     
     def scatter(self, r_in, rec, attenuation, scattered):
         scatter_dir = rec.normal + Vector3.random_unit_vector()
@@ -45,17 +49,20 @@ class Lambertian(Material):
         
         scattered.origin = rec.p
         scattered.direction = scatter_dir
-        attenuation.x, attenuation.y, attenuation.z = self.albedo.x, self.albedo.y, self.albedo.z
+        albedo = self.texture.value(rec.u, rec.v, rec.p)
+        attenuation.x, attenuation.y, attenuation.z = albedo.x, albedo.y, albedo.z
         return True
         
 
 class Metal(Material):
     
-    albedo: Color
+    texture: Texture
     fuzz: float
     
-    def __init__(self, albedo: Color, fuzz: float = 0.0):
-        self.albedo = albedo
+    def __init__(self, texture: Color | Texture, fuzz: float = 0.0):
+        if isinstance(texture, Color):
+            texture = SolidColor(texture)
+        self.texture = texture
         self.fuzz = fuzz
     
     def scatter(self, r_in, rec, attenuation, scattered):
@@ -63,20 +70,29 @@ class Metal(Material):
         reflected = reflected.unit_vector + (self.fuzz * Vector3.random_unit_vector())
         
         scattered.origin, scattered.direction = rec.p, reflected
-        attenuation.x, attenuation.y, attenuation.z = self.albedo.x, self.albedo.y, self.albedo.z
+        
+        albedo = self.texture.value(rec.u, rec.v, rec.p)
+        attenuation.x, attenuation.y, attenuation.z = albedo.x, albedo.y, albedo.z
+        
         return (Vector3.dot(scattered.direction, rec.normal) > 0)
 
 class Dielectric(Material):
     
     refraction_index: float
-    albedo: Color
+    texture: Texture
     
-    def __init__(self, reflection_index: float, albedo = Color.WHITE()):
+    def __init__(self, reflection_index: float, texture: Color | Texture = Color.WHITE()):
+        if isinstance(texture, Color):
+            texture = SolidColor(texture)
+        self.texture = texture
         self.refraction_index = reflection_index
-        self.albedo = albedo
     
     def scatter(self, r_in, rec, attenuation, scattered):
-        attenuation.x, attenuation.y, attenuation.z = self.albedo.x, self.albedo.y, self.albedo.z
+        
+        albedo = self.texture.value(rec.u, rec.v, rec.p)
+        attenuation.x, attenuation.y, attenuation.z = albedo.x, albedo.y, albedo.z
+        
+        
         ri = (1/self.refraction_index) if rec.front_face else self.refraction_index
         unit_direction = r_in.direction.unit_vector
         
@@ -94,13 +110,13 @@ class Dielectric(Material):
         return True
     
     @classmethod
-    def Glass(cls, albedo: Color = Color.WHITE()) -> Material:
+    def Glass(cls, texture: Color | Texture = Color.WHITE()) -> Material:
         """Returns a Dielectric material with a refractive index similar to glass
 
         Returns:
             Material: The glass material
         """
-        return cls(1.50, albedo)
+        return cls(1.50, texture)
 
 
 
