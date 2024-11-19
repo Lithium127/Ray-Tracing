@@ -30,9 +30,9 @@ def degrees_to_radians(deg: float) -> float:
 
 class Camera:
     
-    img_width: int
-    img_height: int
-    aspect_ratio: float
+    _img_width: int
+    _img_height: int
+    _aspect_ratio: float
     
     samples: int
     sample_scale: float
@@ -102,16 +102,16 @@ class Camera:
                 Changes what function is used to generate offsets for each ray sample. 
                 Disregarded if the :samples: param is set to 1. Defaults to "s".
         """
-        self.img_width = width
+        self._img_width = width
         
         if isinstance(height, int) and height > _HEIGHT_ASPECT_BOUNDARY:
             # assume height is to be interpreted as a height
-            self.img_height = height
-            self.aspect_ratio = self.img_width / self.img_height
+            self._img_height = height
+            self._aspect_ratio = self.img_width / self.img_height
         else:
             # assume height param is the aspect ratio of the image
-            self.aspect_ratio = height
-            self.img_height = max(int(self.img_width / self.aspect_ratio), 1)
+            self._aspect_ratio = height
+            self._img_height = max(int(self.img_width / self.aspect_ratio), 1)
         
         # self.focal_length = (center - lookat).length
         self.center = center
@@ -169,12 +169,47 @@ class Camera:
             width, aspect_ratio, center
         )
     
+    @property
+    def img_width(self) -> int:
+        """The width of the rendered image"""
+        return self._img_width
+    
+    @img_width.setter
+    def img_width(self, value: int) -> None:
+        # This abstraction exists to allow for the 
+        # modification of the image size after camera 
+        # init while preserving all other settings. 
+        # Mainly for use with external applications like a GUI
+        self._img_width = value
+    
+    @property
+    def img_height(self) -> int:
+        """The height of the rendered image"""
+        return self._img_height
+    
+    @img_height.setter
+    def img_height(self, value: int | float) -> None:
+        self._img_height = value
+    
+    @property
+    def aspect_ratio(self) -> float:
+        """The aspect ratio, or the relation of width to height, of the rendered image."""
+        return self._aspect_ratio
+    
+    @aspect_ratio.setter
+    def aspect_ratio(self, value: float) -> None:
+        self._aspect_ratio = value
+    
     def render(self, scene: Scene, fp: os.PathLike, filter: t.Callable[[Image.Image],Image.Image] | None = None, silent: bool = False) -> None:
         """Renders an image by propogating rays though a selec scene and saves to a file
-
+        
+        >>> Camera.render(scene, "im.png", silent = False)
+        
         Args:
             scene (Scene): The scene to render
             fp (os.PathLike): The path to save to, including file name.
+            filter (t.Callable[[Image.Image],Image.Image] | None, optional): A function to call that applies a filter to the final image be fore saving. Defaults to None.
+            silent (bool, optional): Whether to print updates to the console. Defaults to False.
         """
         if self.use_multiprocess:
             self.render_multi(scene=scene, fp=fp, filter=filter, silent = silent)
@@ -183,7 +218,9 @@ class Camera:
     
     def render_multi(self, scene: Scene, fp: os.PathLike, filter: t.Callable[[Image.Image],Image.Image] | None = None, silent: bool = False) -> None:
         """Renders a scene by segmenting into blocks and executing each as a subprocess
-
+        To respect camera settings, call the standard render method
+        >>> Camera.render(scene, "im.png", silent = False)
+        
         Args:
             scene (Scene): The scene to render
             fp (os.PathLike): The path to save to
@@ -193,11 +230,6 @@ class Camera:
         
         # Generate a list of block bounds
         def block_args():
-            """A Generator to save time when dispatching task arguments
-
-            Yields:
-                Tuple: A tuple containing arguments for the Camera._render_block function
-            """
             for blc_y in range(ceil(self.img_height / _MULTIPROCESS_BLOCK_SIZE)):
                 for blc_x in range(ceil(self.img_width / _MULTIPROCESS_BLOCK_SIZE)):
                     yield (

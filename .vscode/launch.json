@@ -9,7 +9,7 @@
       "type": "debugpy",
       "request": "launch",
       "program": "gui_wrapper.py",
-      "console": "integratedTerminal"
+      "console": "externalTerminal"
     },
 
     {

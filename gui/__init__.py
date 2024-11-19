@@ -18,7 +18,8 @@ def main_app(screen: Screen, last_scene: Scene, rtrace_scene: rtrace.Scene, cam:
 
 def run():
     rtrace_scene = rtrace.Scene([
-        rtrace.Assets.Sphere(rtrace.Point3(0, 0, -1),0.5, rtrace.Mat.VectorShade())
+        rtrace.Assets.Sphere(rtrace.Point3(0, 0, -1),0.5, rtrace.Mat.Metal(rtrace.Color.WHITE())),
+        rtrace.Assets.Sphere(rtrace.Point3(0, -100.5, -1),100, rtrace.Mat.Lambertian(rtrace.Color.GRAY()))
     ])
     cam = rtrace.Camera(128, 16/9, rtrace.Point3(0, 0, 1.5), rtrace.Point3(0, 0, -1), samples=1, use_multiprocess=False)
     
