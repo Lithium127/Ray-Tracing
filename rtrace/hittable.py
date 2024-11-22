@@ -11,6 +11,11 @@ if t.TYPE_CHECKING:
     from .materials import Material
     from .ray import Ray
 
+# --< Dereferences >-- #
+dot: t.Callable[[Vector3, Vector3], Vector3]   = Vector3.dot
+cross: t.Callable[[Vector3, Vector3], Vector3] = Vector3.cross
+
+
 
 # --< Utility Classes >-- #
 class Interval:
@@ -421,7 +426,7 @@ class Sphere(Hittable):
         
         # Calcualted values for quadratic
         a = r.direction.length_squared
-        h = Vector3.dot(r.direction, oc)
+        h = dot(r.direction, oc)
         c = oc.length_squared - (self.radius * self.radius)
         
         # Check if there are any zeros / intersections at all
@@ -458,4 +463,101 @@ class Sphere(Hittable):
             phi / (2*PI),
             theta / PI
         )
+
+
+class Quad(Hittable):
+    
+    mat: Material
+    u: Vector3
+    v: Vector3
+    w: Vector3
+    normal: Vector3
+    D: float
+    
+    _unit_contains = Interval(0, 1).contains
+    
+    
+    def __init__(self, origin: Point3, u: Vector3, v: Vector3, mat: Material) -> None:
+        super().__init__(origin)
+        self.mat = mat
         
+        n: Vector3 = cross(u, v)
+        self.u = u
+        self.v = v
+        self.w = n / dot(n, n)
+        self.normal = n.unit_vector
+        self.D = dot(self.normal, origin)
+        
+        self.set_bounding_box()
+    
+    @classmethod
+    def Cube(cls, a: Point3, b: Point3, mat: Material) -> HittableList:
+        """Creates a cube of Quad objects within a HittableList between the points a and b
+
+        Args:
+            a (Point3): The first bounding point
+            b (Point3): The second bounding point
+            mat (Material): The material to make the cube out of
+
+        Returns:
+            HittableList: A container for all 6 hittable objects
+        """
+        p_min = Point3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z))
+        p_max = Point3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z))
+        
+        dx = Vector3(p_max.x - p_min.x, 0, 0)
+        dy = Vector3(0, p_max.y - p_min.y, 0)
+        dz = Vector3(0, 0, p_max.z - p_min.z)
+        
+        sides = HittableList([
+            Quad(Point3(p_min.x, p_min.y, p_max.z),  dx,  dy, mat),
+            Quad(Point3(p_max.x, p_min.y, p_max.z), -dz,  dy, mat),
+            Quad(Point3(p_max.x, p_min.y, p_min.z), -dx,  dy, mat),
+            Quad(Point3(p_min.x, p_min.y, p_min.z),  dz,  dy, mat),
+            Quad(Point3(p_min.x, p_max.y, p_max.z),  dx, -dz, mat),
+            Quad(Point3(p_min.x, p_min.y, p_min.z),  dx,  dz, mat),
+        ])
+        
+        return sides
+    
+    def set_bounding_box(self) -> None:
+        bbox_diagonal1 = AABB.from_points(self.center, self.center + self.u + self.v)
+        bbox_diagonal2 = AABB.from_points(self.center + self.u, self.center + self.v)
+        self.bbox = AABB.from_box(bbox_diagonal1, bbox_diagonal2)
+    
+    def hit(self, r: Ray, ray_t: Interval, rec: HitRecord):
+        normal = self.normal
+        
+        denom = dot(normal, r.direction)
+        
+        if abs(denom) < 1e-8:
+            return False
+        
+        t = (self.D - dot(normal, r.origin)) / denom
+        if not ray_t.contains(t):
+            return False
+        
+        intersection = r.at(t)
+        planar_hitpt_vector = intersection - self.center
+        alpha = dot(self.w, cross(planar_hitpt_vector, self.v))
+        beta = dot(self.w, cross(self.u, planar_hitpt_vector))
+        
+        if not self._is_interior(alpha, beta, rec):
+            return False
+        
+        rec.t = t
+        rec.p = intersection
+        rec.mat = self.mat
+        rec.set_face_normal(r, normal)
+
+        return True
+    
+    def _is_interior(self, a: float, b: float, rec: HitRecord) -> bool:
+        
+        if not self._unit_contains(a) or not self._unit_contains(b):
+            return False
+        
+        rec.u = a
+        rec.v = b
+        return True
+    

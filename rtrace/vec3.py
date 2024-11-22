@@ -156,7 +156,8 @@ class Vector3(object):
         while True:
             p = Vector3.random(-1, 1)
             lensq = p.length_squared
-            # The constant here just checks for 
+            # The constant here just checks for arbitrarialy 
+            # small vectors that can't be normalized
             if 1e-160 < lensq and lensq <= 1:
                 return p / math.sqrt(lensq)
     
