@@ -8,6 +8,7 @@ from .color import Color
 from .textures import SolidColor
 
 if t.TYPE_CHECKING:
+    from .vec3 import Point3
     from .textures import Texture
     from .hittable import HitRecord
     from .ray import Ray
@@ -30,6 +31,20 @@ class Material(object):
             bool: Wheather or not this material scatters a ray
         """
         return False
+    
+    def emitted(self, u: float, v: float, p: Point3) -> Color:
+        """Returns the intensity of emmisive lighting from this material
+        based of the color of its texture at point (u, v)
+
+        Args:
+            u (float): The y position to sample
+            v (float): The x position to sample
+            p (Point3): _description_
+
+        Returns:
+            Color: _description_
+        """
+        return Color(0, 0, 0)
     
     
 class Lambertian(Material):
@@ -135,6 +150,7 @@ class VectorShade(Material):
         if self.reflection_rules is not None:
             return self.reflection_rules.scatter(r_in=r_in, rec=rec, attenuation=Color.BLACK(), scattered=scattered)
         return False
+    
 
 
 class MonoShade(Material):
@@ -148,3 +164,19 @@ class MonoShade(Material):
     def scatter(self, r_in, rec, attenuation, scattered):
         attenuation.x, attenuation.y, attenuation.z = self.albedo.x, self.albedo.y, self.albedo.z
         return False
+    
+
+
+class DiffuseLight(Material):
+    
+    texture: Texture
+    intensity: Color
+    
+    def __init__(self, intensity: float, texture: Color | Texture = Color(1, 1, 1)) -> None:
+        if isinstance(texture, Color):
+            self.texture = SolidColor(texture)
+            
+        self.intensity = Color(intensity, intensity, intensity)
+    
+    def emitted(self, u: float, v: float, p: Point3):
+        return self.texture.value(u, v, p) * self.intensity

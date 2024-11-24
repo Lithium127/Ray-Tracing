@@ -282,7 +282,8 @@ class Camera:
             im.putpixel((x, y), (pixel_color * sample_scale).as_tuple(256))
         
         if not silent:
-            print(f"Block ({range_x[0]}, {range_y[0]}) finished") 
+            print(f"Block ({range_x[0]}, {range_y[0]}) finished")
+         
         return (range_x[0], range_y[0]), im
     
     def render_mono(self, scene: Scene, fp: os.PathLike, filter: t.Callable[[Image.Image],Image.Image] | None = None, silent: bool = False) -> None:

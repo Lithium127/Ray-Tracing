@@ -245,19 +245,22 @@ class AABB:
         """
         orig = r.origin
         r_dir = r.direction
-        for pair in [(self.x, 1.0 / r_dir.x, orig.x), (self.y, 1.0 / r_dir.y, orig.y), (self.z, 1.0 / r_dir.z, orig.z)]:
+        for pair in [(self.x, r_dir.x, orig.x), (self.y, r_dir.y, orig.y), (self.z, r_dir.z, orig.z)]:
             yield pair
     
     def hit(self, r: Ray, ray_t: Interval) -> bool:
         
         for ax, adinv, orig in self._axis_interval(r):
+            
+            if not adinv:
+                adinv = 1.0 / adinv
 
             t0, t1 = ((ax.min - orig) * adinv), ((ax.max - orig) * adinv)
             
-            ray_t.min = min(ray_t.min, t0, t1)
-            ray_t.max = max(ray_t.max, t0, t1)
+            ray_t_min = min(ray_t.min, t0, t1)
+            ray_t_max = max(ray_t.max, t0, t1)
             
-            if ray_t.max <= ray_t.min:
+            if ray_t_max <= ray_t_min:
                 return False
         return True
             
@@ -364,6 +367,10 @@ class HittableList(Hittable):
             self.bvh = BVHNode(self.assets)
     
     def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
+        
+        if not self.bbox.hit(r, ray_t):
+            return False
+        
         temp_rec = HitRecord()
         hit_anything = False
         

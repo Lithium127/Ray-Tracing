@@ -84,9 +84,13 @@ class Scene(object):
         if self.hit(r, Interval(0.001), rec):
             scattered = Ray(None, None)
             attenuation = Color(0, 0, 0)
-            if rec.mat.scatter(r, rec, attenuation, scattered):
-                return attenuation * self.r_ray_color(scattered, rec, limit, depth + 1)
-            return attenuation # Color.BLACK()
+            from_emission = rec.mat.emitted(rec.u, rec.v, rec.p)
+            
+            if not rec.mat.scatter(r, rec, attenuation, scattered):
+                return from_emission
+            
+            from_scatter = attenuation * self.r_ray_color(scattered, rec, limit, depth + 1)
+            return from_scatter + from_emission
         
         return self.skybox.get_color(r)
     
@@ -106,8 +110,12 @@ class Scene(object):
         if self.hit(r, Interval(0.001), rec):
             scattered = Ray(None, None)
             attenuation = Color(0, 0, 0)
-            if rec.mat.scatter(r, rec, attenuation, scattered):
-                return attenuation * self.r_ray_color(scattered, rec, limit)
-            return attenuation # Color.BLACK()
+            from_emission = rec.mat.emitted(rec.u, rec.v, rec.p)
+            
+            if not rec.mat.scatter(r, rec, attenuation, scattered):
+                return from_emission
+            
+            from_scatter = attenuation * self.r_ray_color(scattered, rec, limit)
+            return from_scatter + from_emission
         
         return self.skybox.get_color(r)
