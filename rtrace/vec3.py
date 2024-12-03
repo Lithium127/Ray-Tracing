@@ -4,8 +4,8 @@ import math
 from random import uniform
 
 class Vector3(object):
-    
-    # Refactor to use a list for coordinates to be more robust
+    """A vector object in 3D space, usually a direction"""
+
     x: float
     y: float
     z: float
@@ -95,6 +95,7 @@ class Vector3(object):
     
     @property
     def near_zero(self) -> bool:
+        """Returns true if this vector is near zero"""
         s = 1e-8 # A very small constant
         return (abs(self.x) < s) and (abs(self.y) < s) and (abs(self.z) < s)
     
@@ -180,6 +181,12 @@ class Vector3(object):
     
     @classmethod
     def random_on_unit_disc(cls) -> Vector3:
+        """Generates a random vector that is pointed at the edge
+        of a disc (x, y)
+
+        Returns:
+            Vector3: A random vector on a disc
+        """
         while True:
             p = Vector3(uniform(-1, 1), uniform(-1, 1), 0)
             if p.length_squared < 1:

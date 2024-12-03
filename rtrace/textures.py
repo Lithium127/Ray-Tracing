@@ -32,6 +32,7 @@ class Texture(object):
         ...
 
 class SolidColor(Texture):
+    """A solid color texture"""
     
     albedo: Color
     
@@ -43,6 +44,7 @@ class SolidColor(Texture):
 
 
 class ImageMap(Texture):
+    """An image mapped to a texture"""
     
     _color_handle: t.Callable
     

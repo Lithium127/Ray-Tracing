@@ -10,6 +10,7 @@ from .hittable import Interval
 # otherwise using tuples to store the data
 # Hoping that the C implementation of built-in classes are faster than custom
 class Color(object):
+    """A three float color"""
     
     x: float
     y: float

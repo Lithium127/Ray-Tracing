@@ -81,7 +81,7 @@ class Mono(SkyBox):
 
 
 class Textured(SkyBox):
-    
+    """A spherical skybox with an image texture (Equirectangular Projection)"""
     _color_handle: t.Callable
     
     fp: os.PathLike
@@ -90,6 +90,14 @@ class Textured(SkyBox):
     mul: float
     
     def __init__(self, fp: os.PathLike, offsets: tuple[float, float] = (0, 0), mul: float = 1):
+        """Creates a skybox that returns the pixel from an image texture 
+        based on the incoming ray direction using the equirectangular projection
+
+        Args:
+            fp (os.PathLike): The path to the image texture
+            offsets (tuple[float, float], optional): A tuple of (x, y) offsets in degrees to rotate the image by. Defaults to (0, 0).
+            mul (float, optional): The brightness multiplier. Defaults to 1.
+        """
         super(Textured, self).__init__()
         self.fp = fp if not isinstance(fp, Image.Image) else None
         self.mul = mul
@@ -132,14 +140,17 @@ class Textured(SkyBox):
     
     @staticmethod
     def _load_from_float(c: float) -> Color:
+        """Processes a single color as a triplet"""
         return Color(c, c, c)
     
     
     @staticmethod
     def _load_from_rgb(c: tuple[float, float, float]) -> Color:
+        """Loads a color from a tuple"""
         return Color(*c) / 256
     
     
     @staticmethod
     def _load_from_rgba(c: tuple[float, float, float, float]) -> Color:
+        """Loads the first three indexes from a tuple"""
         return Color(*c[:2])

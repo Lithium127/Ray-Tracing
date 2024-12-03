@@ -272,7 +272,6 @@ class BVHNode(Hittable):
     
     def __init__(self, asset_list: list[Hittable], start: int = 0, end: int | None = None) -> None:
         """Creates a Bounding Volume Hierarchy that contains objects within bouding boxes
-        REFACTOR REQUESTED
 
         Args:
             asset_list (list[Hittable]): A list of assets to enclose
@@ -338,12 +337,27 @@ class BVHNode(Hittable):
         return asset.bbox.z.min
     
 class HittableList(Hittable):
+    """A contained list of hittable objects"""
     
     _use_bvh: bool
     assets: list[Hittable]
     bvh: BVHNode | None
     
     def __init__(self, objects: list[Hittable] | None = None, *, use_bvh: bool = False):
+        """A list of hittable objects, each object can be hit independently and reflection can hit each other object in the list
+
+        Objects can be passed at initialization
+        >>> HittableList([Hittable(), Hittable()])
+        
+        Or it can be delayed
+        >>> hit_list = HittableList()
+        >>> for _ in range(10):
+        >>>     hit_list.add_asset(Hittable())
+        
+        Args:
+            objects (list[Hittable], optional): A list of objects in this scene. Defaults to None.
+            use_bvh (bool, optional): Wether this list should automatically create a BVH to contain the object. Defaults to False.
+        """
         super().__init__(Point3(0, 0, 0))
         
         self._use_bvh = use_bvh
@@ -396,7 +410,7 @@ class HittableList(Hittable):
         return self.bvh.hit(r, ray_t, rec)
 
 class Sphere(Hittable):
-    # Transfer to an exposed .cpp file
+    """A hittable sphere with a radius"""
     
     radius: float
     mat: Material
@@ -473,6 +487,7 @@ class Sphere(Hittable):
 
 
 class Quad(Hittable):
+    """A flat quadrilateral object"""
     
     mat: Material
     u: Vector3
@@ -485,6 +500,17 @@ class Quad(Hittable):
     
     
     def __init__(self, origin: Point3, u: Vector3, v: Vector3, mat: Material) -> None:
+        """Creates a Quadrilateral with a center point that encases the area between vec U and V
+
+        Reccommended to use a class method to simplify construction
+        >>> Quad.Cube(a, b, mat)
+        
+        Args:
+            origin (Point3): The origin of this Quad
+            u (Vector3): The vector that describes sides A, C
+            v (Vector3): The vector that describes sides B, D
+            mat (Material): The material for this Quad
+        """
         super().__init__(origin)
         self.mat = mat
         
@@ -527,6 +553,10 @@ class Quad(Hittable):
         
         return sides
     
+    @classmethod
+    def Plane(cls) -> Quad:
+        pass
+    
     def set_bounding_box(self) -> None:
         bbox_diagonal1 = AABB.from_points(self.center, self.center + self.u + self.v)
         bbox_diagonal2 = AABB.from_points(self.center + self.u, self.center + self.v)
@@ -560,11 +590,10 @@ class Quad(Hittable):
         return True
     
     def _is_interior(self, a: float, b: float, rec: HitRecord) -> bool:
-        
-        if not self._unit_contains(a) or not self._unit_contains(b):
+        _unit_contains = self._unit_contains
+        if not _unit_contains(a) or not _unit_contains(b):
             return False
         
-        rec.u = a
-        rec.v = b
+        rec.u, rec.v = a, b
         return True
     

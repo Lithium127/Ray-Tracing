@@ -12,7 +12,7 @@ SAVE_PATH = "images"
 FILE_NAME = "checker_board"
 
 # Rendering Quality
-SAMPLES_PER_PIXEL = 1
+SAMPLES_PER_PIXEL = 8
 RAY_BOUNCE_LIMIT  = 16
 
 # Camera Data
@@ -40,6 +40,14 @@ def main():
                 0.5,
                 Mat.Dielectric.Glass(
                     Color.WHITE()
+                )
+            ),
+            Assets.Sphere(
+                Point3(-1.25, 0.25, -1),
+                0.75,
+                Mat.DiffuseLight(
+                    1,
+                    Texture.ImageMap("textures/Canyon.jpg")
                 )
             ),
             Assets.Sphere(

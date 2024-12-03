@@ -29,6 +29,7 @@ def degrees_to_radians(deg: float) -> float:
     return deg * pi / 180.0
 
 class Camera:
+    """Represents a camera within a scene, given location and scale"""
     
     _img_width: int
     _img_height: int

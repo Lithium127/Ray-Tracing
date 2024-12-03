@@ -14,8 +14,10 @@ if t.TYPE_CHECKING:
     from .ray import Ray
 
 class Material(object):
+    """The base class for a Material"""
     
     def __init__(self) -> None:
+        """Creates a base material without color that does not reflect"""
         ...
     
     def scatter(self, r_in: Ray, rec: HitRecord, attenuation: Color, scattered: Ray) -> bool:
@@ -39,19 +41,25 @@ class Material(object):
         Args:
             u (float): The y position to sample
             v (float): The x position to sample
-            p (Point3): _description_
+            p (Point3): The point of intersection with the object
 
         Returns:
-            Color: _description_
+            Color: The amount of emitted light
         """
         return Color(0, 0, 0)
     
     
 class Lambertian(Material):
+    """A material with perfectly random reflections"""
     
     texture: Texture
     
     def __init__(self, texture: Color | Texture):
+        """A material that reflects light randomly and emits no light
+
+        Args:
+            texture (Color | Texture): The texture or color for the material to use
+        """
         if isinstance(texture, Color):
             texture = SolidColor(texture)
         self.texture = texture
@@ -70,11 +78,21 @@ class Lambertian(Material):
         
 
 class Metal(Material):
+    """A metallic material"""
     
     texture: Texture
     fuzz: float
     
     def __init__(self, texture: Color | Texture, fuzz: float = 0.0):
+        """A material that reflects light perfecty across the normal of a hit
+        and emits no light
+        
+        Creates a metallic look for materials
+
+        Args:
+            texture (Color | Texture): The texture of color for the material
+            fuzz (float, optional): How much a ray should deviate from perfect reflection. Higher values mean less shiny, must be between 0 - 1. Defaults to 0.0.
+        """
         if isinstance(texture, Color):
             texture = SolidColor(texture)
         self.texture = texture
@@ -92,11 +110,19 @@ class Metal(Material):
         return (Vector3.dot(scattered.direction, rec.normal) > 0)
 
 class Dielectric(Material):
-    
+    """A glass-like material"""
     refraction_index: float
     texture: Texture
     
     def __init__(self, reflection_index: float, texture: Color | Texture = Color.WHITE()):
+        """A material that refracts light similar to glass
+        
+        Use known reflection indexes to create materials
+
+        Args:
+            reflection_index (float): The number to determine how much a ray should refract, see wikipedia for how this works and for indexes of common materials
+            texture (Color | Texture, optional): The texture or color for the material. Defaults to Color.WHITE().
+        """
         if isinstance(texture, Color):
             texture = SolidColor(texture)
         self.texture = texture
@@ -128,6 +154,9 @@ class Dielectric(Material):
     def Glass(cls, texture: Color | Texture = Color.WHITE()) -> Material:
         """Returns a Dielectric material with a refractive index similar to glass
 
+        Args:
+            texture (Color | Texture, optional): The texture or color of the material. Defaults to Color.WHITE().
+
         Returns:
             Material: The glass material
         """
@@ -136,11 +165,12 @@ class Dielectric(Material):
 
 
 class VectorShade(Material):
-    """Shades an object based on the normal vector of the hit"""
+    """(WIP) - Shades an object based on the normal vector of the hit"""
     albedo: Color
     reflection_rules: Material
     
     def __init__(self, *, rlike: Material | None = None) -> None:
+        raise NotImplementedError()
         self.albedo = Color(1, 1, 1)
         self.reflection_rules = rlike
     
@@ -154,11 +184,12 @@ class VectorShade(Material):
 
 
 class MonoShade(Material):
-    """Shades an object with a single color and does not propogate rays"""
+    """(WIP) - Shades an object with a single color and does not propogate rays"""
     
     albedo: Color
     
     def __init__(self, albedo: Color):
+        raise NotImplementedError()
         self.albedo = albedo
     
     def scatter(self, r_in, rec, attenuation, scattered):
@@ -168,11 +199,22 @@ class MonoShade(Material):
 
 
 class DiffuseLight(Material):
+    """Makes an object emit light to the scene around it"""
     
     texture: Texture
     intensity: Color
     
     def __init__(self, intensity: float, texture: Color | Texture = Color(1, 1, 1)) -> None:
+        """A material that emits light into the scene on to other objects
+        when using this material it is reccommended to use a high ray sample per pixel
+        to alliviate noisiness
+        
+        The object emits light by random rays bouncing into the object
+
+        Args:
+            intensity (float): The intensity of the light, greater than 1 (>1) will light up more than just the object itself
+            texture (Color | Texture, optional): The texure or color this object should use, affects how much light is emitted. Defaults to white.
+        """
         self.texture = texture
         if isinstance(texture, Color):
             self.texture = SolidColor(texture)
@@ -185,10 +227,11 @@ class DiffuseLight(Material):
 
 
 class MonoDirectionalScatter(Material):
-    
+    """(WIP) - Attempts to scatter all incoming rays opposite the normal direction of this object"""
     scatter_dir: Vector3
     
     def __init__(self, direction: Vector3):
+        raise NotImplementedError()
         self.scatter_dir = direction
     
     def scatter(self, r_in, rec, attenuation, scattered):
