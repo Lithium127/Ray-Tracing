@@ -173,6 +173,7 @@ class DiffuseLight(Material):
     intensity: Color
     
     def __init__(self, intensity: float, texture: Color | Texture = Color(1, 1, 1)) -> None:
+        self.texture = texture
         if isinstance(texture, Color):
             self.texture = SolidColor(texture)
             
@@ -180,3 +181,16 @@ class DiffuseLight(Material):
     
     def emitted(self, u: float, v: float, p: Point3):
         return self.texture.value(u, v, p) * self.intensity
+
+
+
+class MonoDirectionalScatter(Material):
+    
+    scatter_dir: Vector3
+    
+    def __init__(self, direction: Vector3):
+        self.scatter_dir = direction
+    
+    def scatter(self, r_in, rec, attenuation, scattered):
+        scattered.origin, scattered.direction = rec.p, self.scatter_dir
+        return True

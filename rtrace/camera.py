@@ -241,16 +241,29 @@ class Camera:
 
         # Dispaatch each block to a process and paste the resulting image to the main canvas
         with mp.Pool() as pool:
-            with tqdm(total = ceil(self.img_height / _MULTIPROCESS_BLOCK_SIZE) * ceil(self.img_width / _MULTIPROCESS_BLOCK_SIZE), desc="waiting for worker threads") as progress:
-                for pos, img_block in pool.starmap(self._render_block, block_args()):
-                    im.paste(img_block, pos)
+            
+            progress = tqdm(
+                total = ceil(self.img_height / _MULTIPROCESS_BLOCK_SIZE) * ceil(self.img_width / _MULTIPROCESS_BLOCK_SIZE), 
+                desc="waiting for worker threads"
+            ) if not silent else None
+            
+            for pos, img_block in pool.starmap(self._render_block, block_args()):
+                im.paste(img_block, pos)
+                
+                if not silent:
                     progress.update()
+            
+            if not silent:
+                progress.close()
+        
         # Image filter step, user defined
         if filter is not None:
             im = filter(im)
         # Save the image
         im.save(fp)
     
+    
+    # Convert to a single function definition to save 
     def _render_block(self, scene: Scene, range_x: tuple[int, int], range_y: tuple[int, int], silent: bool = False) -> None:
         """Renders a set block of the image, used for worker threads when multiprocessing
 
@@ -308,7 +321,7 @@ class Camera:
         # Reducing the number of assignments makes the program consistently 
         # run 5 iterations / sec faster per improvement
         
-        for i in tqdm(range(self.img_width * self.img_height)):
+        for i in (tqdm(range(self.img_width * self.img_height)) if not silent else range(self.img_width * self.img_height)):
             x, y = i % width, i // height
             # For loop completion
             pixel_color = Color(0, 0, 0)

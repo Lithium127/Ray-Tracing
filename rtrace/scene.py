@@ -8,6 +8,7 @@ from .vec3 import Vector3
 from .ray import Ray
 
 if t.TYPE_CHECKING:
+    from os import PathLike
     from .hittable import Hittable
 
 class Scene(object):
@@ -27,6 +28,12 @@ class Scene(object):
         for asset in assets:
             self.add_asset(asset)
         self.skybox = skybox
+    
+    
+    @classmethod
+    def from_json(self, fp: PathLike) -> Scene:
+        pass
+    
     
     def add_asset(self, asset: Hittable) -> t.NoReturn:
         """Adds an Asset to this scene

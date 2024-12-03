@@ -5,6 +5,10 @@ from math import sqrt
 
 from .hittable import Interval
 
+
+# Look at saving time by only creating colors when we need to actually write data
+# otherwise using tuples to store the data
+# Hoping that the C implementation of built-in classes are faster than custom
 class Color(object):
     
     x: float
