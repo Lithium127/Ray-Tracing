@@ -3,13 +3,13 @@ import typing as t
 
 from .color import Color
 from .skybox import SkyBox, Lerp
-from .hittable import HitRecord, Interval, BVHNode
+from .assets.hittable import HitRecord, Interval, BVHNode
 from .vec3 import Vector3
 from .ray import Ray
 
 if t.TYPE_CHECKING:
     from os import PathLike
-    from .hittable import Hittable
+    from .assets.hittable import Hittable
 
 class Scene(object):
     """A collection of hittable objects and a skybox that can be rendered with a camera"""

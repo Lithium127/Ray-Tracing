@@ -3,15 +3,19 @@ import typing as t
 
 from math import sqrt
 
-from .vec3 import Vector3
-from .color import Color
+from ..vec3 import Vector3
+from ..color import Color
 from .textures import SolidColor
 
 if t.TYPE_CHECKING:
-    from .vec3 import Point3
+    from ..vec3 import Point3
     from .textures import Texture
     from .hittable import HitRecord
-    from .ray import Ray
+    from ..ray import Ray
+
+dot = Vector3.dot
+reflect = Vector3.reflect
+refract = Vector3.refract
 
 class Material(object):
     """The base class for a Material"""
@@ -54,12 +58,14 @@ class Lambertian(Material):
     
     texture: Texture
     
-    def __init__(self, texture: Color | Texture):
+    def __init__(self, texture: Color | Texture | tuple):
         """A material that reflects light randomly and emits no light
 
         Args:
             texture (Color | Texture): The texture or color for the material to use
         """
+        if isinstance(texture, tuple):
+            texture = Color(*texture)
         if isinstance(texture, Color):
             texture = SolidColor(texture)
         self.texture = texture
@@ -83,7 +89,7 @@ class Metal(Material):
     texture: Texture
     fuzz: float
     
-    def __init__(self, texture: Color | Texture, fuzz: float = 0.0):
+    def __init__(self, texture: Color | Texture | tuple[int, int, int], fuzz: float = 0.0):
         """A material that reflects light perfecty across the normal of a hit
         and emits no light
         
@@ -93,13 +99,15 @@ class Metal(Material):
             texture (Color | Texture): The texture of color for the material
             fuzz (float, optional): How much a ray should deviate from perfect reflection. Higher values mean less shiny, must be between 0 - 1. Defaults to 0.0.
         """
+        if isinstance(texture, tuple):
+            texture = Color(*texture)
         if isinstance(texture, Color):
             texture = SolidColor(texture)
         self.texture = texture
         self.fuzz = fuzz
     
     def scatter(self, r_in, rec, attenuation, scattered):
-        reflected = Vector3.reflect(r_in.direction, rec.normal)
+        reflected = reflect(r_in.direction, rec.normal)
         reflected = reflected.unit_vector + (self.fuzz * Vector3.random_unit_vector())
         
         scattered.origin, scattered.direction = rec.p, reflected
@@ -114,7 +122,7 @@ class Dielectric(Material):
     refraction_index: float
     texture: Texture
     
-    def __init__(self, reflection_index: float, texture: Color | Texture = Color.WHITE()):
+    def __init__(self, reflection_index: float, texture: Color | Texture | tuple[int, int, int] = Color.WHITE()):
         """A material that refracts light similar to glass
         
         Use known reflection indexes to create materials
@@ -123,6 +131,8 @@ class Dielectric(Material):
             reflection_index (float): The number to determine how much a ray should refract, see wikipedia for how this works and for indexes of common materials
             texture (Color | Texture, optional): The texture or color for the material. Defaults to Color.WHITE().
         """
+        if isinstance(texture, tuple):
+            texture = Color(*texture)
         if isinstance(texture, Color):
             texture = SolidColor(texture)
         self.texture = texture
@@ -137,14 +147,14 @@ class Dielectric(Material):
         ri = (1/self.refraction_index) if rec.front_face else self.refraction_index
         unit_direction = r_in.direction.unit_vector
         
-        cos_theta = min(Vector3.dot(-unit_direction, rec.normal), 1.0)
+        cos_theta = min(dot(-unit_direction, rec.normal), 1.0)
         sin_theta = sqrt(1.0 - cos_theta*cos_theta)
         
         direction: Vector3
         if (ri * sin_theta) > 1.0:
-            direction = Vector3.reflect(unit_direction, rec.normal)
+            direction = reflect(unit_direction, rec.normal)
         else:
-            direction = Vector3.refract(unit_direction, rec.normal, ri)
+            direction = refract(unit_direction, rec.normal, ri)
         
         scattered.origin, scattered.direction = rec.p, direction
         
@@ -204,7 +214,7 @@ class DiffuseLight(Material):
     texture: Texture
     intensity: Color
     
-    def __init__(self, intensity: float, texture: Color | Texture = Color(1, 1, 1)) -> None:
+    def __init__(self, intensity: float, texture: Color | Texture | tuple[int, int, int] = Color(1, 1, 1)) -> None:
         """A material that emits light into the scene on to other objects
         when using this material it is reccommended to use a high ray sample per pixel
         to alliviate noisiness
@@ -215,9 +225,11 @@ class DiffuseLight(Material):
             intensity (float): The intensity of the light, greater than 1 (>1) will light up more than just the object itself
             texture (Color | Texture, optional): The texure or color this object should use, affects how much light is emitted. Defaults to white.
         """
-        self.texture = texture
+        if isinstance(texture, tuple):
+            texture = Color(*texture)
         if isinstance(texture, Color):
-            self.texture = SolidColor(texture)
+            texture = SolidColor(texture)
+        self.texture = texture
             
         self.intensity = Color(intensity, intensity, intensity)
     

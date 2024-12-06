@@ -24,9 +24,10 @@ _HEIGHT_ASPECT_BOUNDARY = 4
 # 16 yielded the best results
 _MULTIPROCESS_BLOCK_SIZE = 16
 
+_PI_OVER_SEMICIRCLE = pi / 180.0
 
 def degrees_to_radians(deg: float) -> float:
-    return deg * pi / 180.0
+    return deg * _PI_OVER_SEMICIRCLE
 
 class Camera:
     """Represents a camera within a scene, given location and scale"""
@@ -217,7 +218,7 @@ class Camera:
         else:
             self.render_mono(scene=scene, fp=fp, filter=filter, silent = silent)
     
-    def render_multi(self, scene: Scene, fp: os.PathLike, filter: t.Callable[[Image.Image],Image.Image] | None = None, silent: bool = False) -> None:
+    def render_multi(self, scene: Scene, fp: os.PathLike, filter: t.Callable[[Image.Image],Image.Image] | None = None, silent: bool = False, show: bool = False) -> None:
         """Renders a scene by segmenting into blocks and executing each as a subprocess
         To respect camera settings, call the standard render method
         >>> Camera.render(scene, "im.png", silent = False)

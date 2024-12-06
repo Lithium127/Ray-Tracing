@@ -16,6 +16,6 @@ from .color import Color
 from .vec3 import Point3, Vector3
 
 from . import skybox as SkyBox
-from . import hittable as Assets
-from . import materials as Mat
-from . import textures as Texture
+from .assets import hittable as Assets
+from .assets import materials as Mat
+from .assets import textures as Texture

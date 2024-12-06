@@ -5,16 +5,18 @@ from math import sqrt, inf, acos, atan2
 from math import pi as PI
 from random import choice
 
-from .vec3 import Point3, Vector3
+from ..vec3 import Point3, Vector3
 
 if t.TYPE_CHECKING:
     from .materials import Material
-    from .ray import Ray
+    from ..ray import Ray
 
 # --< Dereferences >-- #
-dot: t.Callable[[Vector3, Vector3], Vector3]   = Vector3.dot
+dot: t.Callable[[Vector3, Vector3], float]   = Vector3.dot
 cross: t.Callable[[Vector3, Vector3], Vector3] = Vector3.cross
 
+
+_TWO_PI = 2 * PI
 
 
 # --< Utility Classes >-- #
@@ -270,7 +272,10 @@ class BVHNode(Hittable):
     left: Hittable
     right: Hittable
     
-    def __init__(self, asset_list: list[Hittable], start: int = 0, end: int | None = None) -> None:
+    # We save a whole hash step by saving the reference
+    bbox_hit: t.Callable[[Ray, Interval], bool]
+    
+    def __init__(self, asset_list: list[Hittable], sort_assets: bool = True) -> None:
         """Creates a Bounding Volume Hierarchy that contains objects within bouding boxes
 
         Args:
@@ -278,63 +283,46 @@ class BVHNode(Hittable):
             start (int, optional): The start index for tree generation. Defaults to 0.
             end (int | None, optional): The end index for tree generation. Defaults to None.
         """
-
-        end = end or len(asset_list)
-        # Comparators should be lambda functions
+        
         comparator = choice([
-            self.box_x_compare,
-            self.box_y_compare,
-            self.box_z_compare,
+            lambda asset: asset.bbox.x.min,
+            lambda asset: asset.bbox.y.min,
+            lambda asset: asset.bbox.z.min,
         ])
         
-        object_span = end - start
+        object_span = len(asset_list)
         
         # Recursively create BVH Nodes until the entire space is filled
         if object_span == 1:
-            self.left = self.right = asset_list[start]
+            self.left = self.right = asset_list[0]
         elif object_span == 2:
-            self.left = asset_list[start]
-            self.right = asset_list[start + 1]
+            self.left = asset_list[0]
+            self.right = asset_list[1]
         else:
-            asset_list.sort(key = comparator)
+            if sort_assets:
+                asset_list.sort(key = comparator)
             # Refactor this to slice the asset_list list instead of passinng indexes
-            mid = start + (object_span // 2)
-            self.left = BVHNode(asset_list, start, mid)
-            self.right = BVHNode(asset_list, mid, end)
+            mid = (object_span // 2)
+            self.left = BVHNode(asset_list[:mid], sort_assets=False)
+            self.right = BVHNode(asset_list[mid:], sort_assets=False)
 
         # Create a new bounding box for this object
         self.bbox = AABB.from_box(self.left.bbox, self.right.bbox)
+        self.bbox_hit = self.bbox.hit
     
     def __str__(self) -> str:
         return f"<BVH : [{self.left}|{self.right}]>"
     
     def hit(self, r: Ray, ray_t: Interval, rec: HitRecord):
         
-        if not self.bbox.hit(r, ray_t):
+        if not self.bbox_hit(r, ray_t):
             return False
         
-        temp_rec = HitRecord()
-        temp_rec.copy_data(rec)
+        hit_left = self.left.hit(r, ray_t, rec)
+        hit_right = self.right.hit(r, Interval(ray_t.min, (rec.t if hit_left else ray_t.max)), rec)
         
-        hit_left = self.left.hit(r, ray_t, temp_rec)
-        hit_right = self.right.hit(r, Interval(ray_t.min, (temp_rec.t if hit_left else ray_t.max)), temp_rec)
+        return (hit_left or hit_right)
         
-        rec.copy_data(temp_rec)
-        
-        if (hit_left or hit_right):
-            return True
-        return False
-        
-
-
-    def box_x_compare(self, asset: Hittable) -> None:
-        return asset.bbox.x.min
-    
-    def box_y_compare(self, asset: Hittable) -> None:
-        return asset.bbox.y.min
-    
-    def box_z_compare(self, asset: Hittable) -> None:
-        return asset.bbox.z.min
     
 class HittableList(Hittable):
     """A contained list of hittable objects"""
@@ -364,20 +352,20 @@ class HittableList(Hittable):
         
         self.assets = []
         if objects is not None:
-            [self.add_asset(obj) for obj in objects]
+            [self.add_asset(obj, suppress_bvh_updates=True) for obj in objects]
             
         if use_bvh:
             self.bvh = BVHNode(self.assets)
             self.hit = self._hit_bvh
     
-    def add_asset(self, asset: Hittable) -> None:
+    def add_asset(self, asset: Hittable, *, suppress_bvh_updates = False) -> None:
         if len(self.assets) < 1:
             self.center = asset.center
             self.bbox = asset.bbox
         self.assets.append(asset)
         self.bbox = AABB.from_box(self.bbox, asset.bbox)
         
-        if self._use_bvh:
+        if self._use_bvh and not suppress_bvh_updates:
             self.bvh = BVHNode(self.assets)
     
     def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
@@ -481,7 +469,7 @@ class Sphere(Hittable):
         phi = atan2(-p.z, p.x) + PI
         
         return (
-            phi / (2*PI),
+            phi / _TWO_PI,
             theta / PI
         )
 
@@ -596,4 +584,105 @@ class Quad(Hittable):
         
         rec.u, rec.v = a, b
         return True
+
+
+class Triangle(Hittable):
     
+    vertices: tuple[Point3,Point3,Point3]
+    
+    _unit_contains = Interval(0, 1).contains
+    
+    def __init__(self, vertices: tuple[Point3,Point3,Point3], mat: Material):
+        super().__init__(vertices[0])
+        self.vertices = vertices
+        self.mat = mat
+        self.bbox = AABB(
+            Interval(
+                min(vertices[0].x, vertices[1].x, vertices[2].x),
+                max(vertices[0].x, vertices[1].x, vertices[2].x),
+            ),
+            Interval(
+                min(vertices[0].y, vertices[1].y, vertices[2].y),
+                max(vertices[0].y, vertices[1].y, vertices[2].y),
+            ),
+            Interval(
+                min(vertices[0].z, vertices[1].z, vertices[2].z),
+                max(vertices[0].z, vertices[1].z, vertices[2].z),
+            )
+        )
+    
+    def hit(self, r: Ray, ray_t: Interval, rec: HitRecord) -> bool:
+        r_dir = r.direction
+        v0, v1, v2 = self.vertices
+        e1, e2 = v1 - v0, v2 - v0
+        
+        pvec = cross(r_dir, e2)
+        det = dot(pvec, e1)
+        if abs(det) < 1e-8:
+            return False
+        
+        inv_det = 1.0 / det
+        
+        tvec = r.origin - v0
+        u = dot(pvec, tvec) * inv_det
+        if not self._unit_contains(u):
+            return False
+        
+        qvec = cross(tvec, e1)
+        v = dot(qvec, r_dir) * inv_det
+        if v < 0.0 or u + v > 1.0:
+            return False
+        
+        t = dot(e2, qvec) * inv_det
+        if not ray_t.contains(t):
+            return False
+        
+        rec.t = t
+        rec.p = r.at(t)
+        rec.mat = self.mat
+        rec.set_face_normal(r, cross(e1, e2).unit_vector)
+        rec.u, rec.v = u, v
+        
+        return True
+
+
+
+class Model(HittableList):
+    
+    
+    def __init__(self, face_list: list[Triangle], mat: Material):
+        super().__init__(face_list, use_bvh=True)
+    
+    
+    @classmethod
+    def from_obj(cls, fp: str, mat: Material) -> Model:
+        with open(fp, "r") as f:
+            data = f.read()
+        
+        vertex_str, faces_str = data.split("\n\n")[:2]
+        
+        vertices = []
+        for triplet in vertex_str.split("\n"):
+            triplet = triplet.split(" ")
+            if not (len(triplet) == 4 or triplet[0] == "v"):
+                raise ValueError("Corrupted obj file")
+            
+            vertices.append(Point3(float(triplet[1]), float(triplet[2]), float(triplet[3])))
+        
+        face_list = []
+        
+        for face_triplet in faces_str.split("\n"):
+            face_triplet = face_triplet.split(" ")
+
+            if not (len(face_triplet) == 4 or face_triplet[0] == "f"):
+                raise ValueError("Corrupted obj file")
+            
+            x, y, z = int(face_triplet[1]) - 1, int(face_triplet[2]) - 1, int(face_triplet[3]) - 1
+            
+            face_list.append(Triangle([
+                vertices[x],
+                vertices[y],
+                vertices[z],
+            ], mat))
+            
+        return cls(face_list, mat)

@@ -3,10 +3,10 @@ import typing as t
 
 from PIL import Image
 
-from .color import Color
+from ..color import Color
 
 if t.TYPE_CHECKING:
-    from .vec3 import Point3
+    from ..vec3 import Point3
     from os import PathLike
 
 __all__ = ["Texture", "SolidColor", "ImageMap"]

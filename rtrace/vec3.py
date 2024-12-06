@@ -100,7 +100,7 @@ class Vector3(object):
         return (abs(self.x) < s) and (abs(self.y) < s) and (abs(self.z) < s)
     
     @classmethod
-    def dot(cls, v1: Vector3, v2: Vector3) -> Vector3:
+    def dot(cls, v1: Vector3, v2: Vector3) -> float:
         """Take the dot product of two vectors
 
         Args:
@@ -108,7 +108,7 @@ class Vector3(object):
             v2 (Vector3): Vector 2
 
         Returns:
-            Vector3: The dot product of v1 and v2
+            float: The dot product of v1 and v2
         """
         return (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z)
     
