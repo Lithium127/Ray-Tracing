@@ -319,7 +319,13 @@ class BVHNode(Hittable):
             return False
         
         hit_left = self.left.hit(r, ray_t, rec)
-        hit_right = self.right.hit(r, Interval(ray_t.min, (rec.t if hit_left else ray_t.max)), rec)
+        if_mul = int(hit_left)
+        
+        hit_right = self.right.hit(r, Interval(
+            ray_t.min, 
+            # A potentially faster multiplication
+            (rec.t * if_mul) + (ray_t.max * (1 - if_mul))
+        ), rec)
         
         return (hit_left or hit_right)
         
@@ -686,3 +692,14 @@ class Model(HittableList):
             ], mat))
             
         return cls(face_list, mat)
+
+
+
+class ConstantMedium(Hittable):
+    
+    boundary: Hittable
+    neg_inv_density: float
+    phase_function: t.Callable
+    
+    def __init__(self, boundary: Hittable, density: float) -> None:
+        self.boundary = boundary

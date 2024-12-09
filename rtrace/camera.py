@@ -1,5 +1,7 @@
 from __future__ import annotations
 import typing as t
+import os
+
 from math import ceil, pi, tan
 from random import random
 
@@ -12,7 +14,6 @@ from .vec3 import Vector3
 from .ray import Ray
 
 if t.TYPE_CHECKING:
-    import os
     from .scene import Scene
     from .vec3 import Point3
 
@@ -22,7 +23,7 @@ _HEIGHT_ASPECT_BOUNDARY = 4
 
 # After testing, its faster to use smaller numbers
 # 16 yielded the best results
-_MULTIPROCESS_BLOCK_SIZE = 16
+_MULTIPROCESS_BLOCK_SIZE = 64
 
 _PI_OVER_SEMICIRCLE = pi / 180.0
 
@@ -296,8 +297,8 @@ class Camera:
             
             im.putpixel((x, y), (pixel_color * sample_scale).as_tuple(256))
         
-        if not silent:
-            print(f"Block ({range_x[0]}, {range_y[0]}) finished")
+        # if not silent:
+        #     print(f"Block ({range_x[0]}, {range_y[0]}) finished")
          
         return (range_x[0], range_y[0]), im
     

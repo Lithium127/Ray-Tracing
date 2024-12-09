@@ -11,6 +11,9 @@ if t.TYPE_CHECKING:
     from os import PathLike
     from .assets.hittable import Hittable
 
+
+_MIN_INTERVAL_DIFFERENCE = 0.001
+
 class Scene(object):
     """A collection of hittable objects and a skybox that can be rendered with a camera"""
     
@@ -87,8 +90,7 @@ class Scene(object):
         if limit < depth:
             return Color(0, 0, 0)
         
-        # Magic number to avoid hitting the space we start at
-        if self.hit(r, Interval(0.001), rec):
+        if self.hit(r, Interval(_MIN_INTERVAL_DIFFERENCE), rec):
             scattered = Ray(None, None)
             attenuation = Color(0, 0, 0)
             from_emission = rec.mat.emitted(rec.u, rec.v, rec.p)
@@ -113,8 +115,7 @@ class Scene(object):
         """
         rec = HitRecord()
         
-        # Magic number to avoid re-hitting the space we start at
-        if self.hit(r, Interval(0.001), rec):
+        if self.hit(r, Interval(_MIN_INTERVAL_DIFFERENCE), rec):
             scattered = Ray(None, None)
             attenuation = Color(0, 0, 0)
             from_emission = rec.mat.emitted(rec.u, rec.v, rec.p)

@@ -5,6 +5,13 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Workspace Wrapper",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "workspace.py",
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Launch GUI",
       "type": "debugpy",
       "request": "launch",
